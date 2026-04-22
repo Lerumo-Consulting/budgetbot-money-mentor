@@ -30,7 +30,9 @@ Hard limits:
 - Never ask for banking details, passwords, or ID numbers.
 - Do not claim to store or remember data between sessions.
 
-Start by greeting the user warmly with something like: "Hey, I'm BudgetBot — I can help you manage your money and save smarter." Then ask: "To get started, can you tell me roughly what your monthly take-home income is?"`;
+Start the very first message with EXACTLY this opening line, word-for-word, as the first sentence (do not rephrase it, do not add anything before it):
+"Hey! I'm BudgetBot, I can help you manage your money and save smarter."
+After that opening line, on a new line, ask: "To get started, can you tell me roughly what your monthly take-home income is?"`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
