@@ -86,7 +86,7 @@ npm run dev
 Then open `http://localhost:5173` in your browser, enter your Anthropic API key when prompted, and start chatting.
 
 ### Using the live version
-1. Visit the [live app](https://your-lovable-url.lovable.app)
+1. Visit the [live app](https://budgetbot-money-mentor.lovable.app/)
 2. Enter your Anthropic API key when prompted (saved to your browser only)
 3. BudgetBot greets you automatically — just start chatting
 
@@ -151,9 +151,14 @@ This project taught me:
 
 ---
 
-## 👤 Author
+## 👤 Authors
 
-**[Your Name]**
+Adrian Majavu
+Tumahole Nkhatho
+Phomolo Tleane
+Bonolo Leponesa
+Senamile Maphoso
+
 CAPACITI AI Bootcamp 2026 — Clickatell Cohort
 [github.com/YOUR-USERNAME](https://github.com/YOUR-USERNAME)
 
