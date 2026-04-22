@@ -3,15 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChatMessage, streamChat } from "@/lib/budgetbot";
 import { ChatBubble, TypingIndicator } from "./ChatBubble";
-import { Wallet, Send, RefreshCw, X } from "lucide-react";
+import { Wallet, Send, RefreshCw, X, Maximize2, Minimize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BudgetBotProps {
   onClose?: () => void;
   embedded?: boolean;
+  maximized?: boolean;
+  onToggleMaximize?: () => void;
 }
 
-export const BudgetBot = ({ onClose, embedded = false }: BudgetBotProps = {}) => {
+export const BudgetBot = ({ onClose, embedded = false, maximized, onToggleMaximize }: BudgetBotProps = {}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -104,6 +106,11 @@ export const BudgetBot = ({ onClose, embedded = false }: BudgetBotProps = {}) =>
             <RefreshCw className="h-4 w-4" />
             <span className="hidden sm:inline">New chat</span>
           </Button>
+          {onToggleMaximize && (
+            <Button variant="ghost" size="icon" onClick={onToggleMaximize} aria-label={maximized ? "Restore chat size" : "Maximize chat"}>
+              {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          )}
           {onClose && (
             <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close chat">
               <X className="h-4 w-4" />

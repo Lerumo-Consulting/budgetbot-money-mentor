@@ -5,6 +5,7 @@ import { Wallet, MessageCircle, X, PiggyBank, TrendingUp, Target, ShieldCheck, S
 
 const Index = () => {
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatMaximized, setChatMaximized] = useState(false);
 
   useEffect(() => {
     document.title = "BudgetBot — Your personal budget & savings advisor";
@@ -105,8 +106,19 @@ const Index = () => {
 
       {/* Popup chat panel */}
       {chatOpen && (
-        <div className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:h-[640px] sm:max-h-[calc(100vh-3rem)] sm:w-[400px] sm:rounded-2xl overflow-hidden shadow-2xl border border-border bg-background animate-fade-in-up flex flex-col">
-          <BudgetBot embedded onClose={() => setChatOpen(false)} />
+        <div
+          className={
+            chatMaximized
+              ? "fixed inset-0 z-50 overflow-hidden shadow-2xl border border-border bg-background animate-fade-in-up flex flex-col"
+              : "fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:h-[640px] sm:max-h-[calc(100vh-3rem)] sm:w-[400px] sm:rounded-2xl overflow-hidden shadow-2xl border border-border bg-background animate-fade-in-up flex flex-col"
+          }
+        >
+          <BudgetBot
+            embedded
+            onClose={() => { setChatOpen(false); setChatMaximized(false); }}
+            maximized={chatMaximized}
+            onToggleMaximize={() => setChatMaximized((m) => !m)}
+          />
         </div>
       )}
     </div>
