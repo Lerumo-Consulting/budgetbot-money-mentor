@@ -3,10 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChatMessage, streamChat } from "@/lib/budgetbot";
 import { ChatBubble, TypingIndicator } from "./ChatBubble";
-import { Wallet, Send, RefreshCw } from "lucide-react";
+import { Wallet, Send, RefreshCw, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export const BudgetBot = () => {
+interface BudgetBotProps {
+  onClose?: () => void;
+  embedded?: boolean;
+}
+
+export const BudgetBot = ({ onClose, embedded = false }: BudgetBotProps = {}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -82,7 +87,7 @@ export const BudgetBot = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className={embedded ? "flex flex-col h-full bg-background" : "flex flex-col h-screen bg-background"}>
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border bg-card sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -97,8 +102,13 @@ export const BudgetBot = () => {
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={startGreeting} disabled={loading} className="gap-1.5">
             <RefreshCw className="h-4 w-4" />
-            <span className="hidden sm:inline">New conversation</span>
+            <span className="hidden sm:inline">New chat</span>
           </Button>
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close chat">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </header>
 

@@ -30,7 +30,7 @@ Hard limits:
 - Never ask for banking details, passwords, or ID numbers.
 - Do not claim to store or remember data between sessions.
 
-Start by greeting the user warmly and asking: 'To get started, can you tell me roughly what your monthly take-home income is?'`;
+Start by greeting the user warmly with something like: "Hey, I'm BudgetBot — I can help you manage your money and save smarter." Then ask: "To get started, can you tell me roughly what your monthly take-home income is?"`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
