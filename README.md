@@ -8,7 +8,7 @@ Built as a **Week 1 project** for the CAPACITI × Clickatell AI Bootcamp 2026.
 
 ## 🖥️ Live Demo
 
-🔗 [Try BudgetBot live](https://budgetbot-money-mentor.lovable.app/) ← *replace with your Lovable URL*
+🔗 [Try BudgetBot live](https://budgetbot-money-mentor.lovable.app/) 
 
 ---
 
@@ -160,7 +160,7 @@ Bonolo Leponesa
 Senamile Maphoso
 
 CAPACITI AI Bootcamp 2026 — Clickatell Cohort
-[github.com/YOUR-USERNAME](https://github.com/YOUR-USERNAME)
+https://github.com/Lerumo-Consulting
 
 ---
 
