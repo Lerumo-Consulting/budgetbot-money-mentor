@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChatMessage, callClaude } from "@/lib/budgetbot";
+import { ChatMessage, streamChat } from "@/lib/budgetbot";
 import { ChatBubble, TypingIndicator } from "./ChatBubble";
-import { Wallet, Send, RefreshCw, LogOut } from "lucide-react";
+import { Wallet, Send, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface Props {
-  apiKey: string;
-  onClearKey: () => void;
-}
-
-export const BudgetBot = ({ apiKey, onClearKey }: Props) => {
+export const BudgetBot = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,18 +20,32 @@ export const BudgetBot = ({ apiKey, onClearKey }: Props) => {
     });
   };
 
-  const sendToClaude = async (history: ChatMessage[]) => {
+  const runStream = async (history: ChatMessage[]) => {
     setLoading(true);
-    try {
-      const reply = await callClaude(apiKey, history);
-      setMessages((prev) => [...prev, { role: "assistant", content: reply, timestamp: Date.now() }]);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong.";
-      toast({ title: "BudgetBot error", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-      setBooting(false);
-    }
+    let assistantSoFar = "";
+    let createdAssistant = false;
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        if (createdAssistant) {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
+          );
+        }
+        createdAssistant = true;
+        return [...prev, { role: "assistant", content: assistantSoFar, timestamp: Date.now() }];
+      });
+    };
+    await streamChat({
+      messages: history.map((m) => ({ role: m.role, content: m.content })),
+      onDelta: upsertAssistant,
+      onDone: () => { setLoading(false); setBooting(false); },
+      onError: (msg) => {
+        setLoading(false);
+        setBooting(false);
+        toast({ title: "BudgetBot error", description: msg, variant: "destructive" });
+      },
+    });
   };
 
   const startGreeting = async () => {
@@ -46,7 +55,7 @@ export const BudgetBot = ({ apiKey, onClearKey }: Props) => {
     const seed: ChatMessage[] = [
       { role: "user", content: "Hi", timestamp: Date.now() },
     ];
-    await sendToClaude(seed);
+    await runStream(seed);
     // Hide the seed user message so the bot appears to start the chat
     setMessages((prev) => prev.filter((m) => m.role !== "user" || m.content !== "Hi"));
   };
@@ -69,7 +78,7 @@ export const BudgetBot = ({ apiKey, onClearKey }: Props) => {
     const next = [...messages, userMsg];
     setMessages(next);
     setInput("");
-    await sendToClaude(next);
+    await runStream(next);
   };
 
   return (
@@ -89,10 +98,6 @@ export const BudgetBot = ({ apiKey, onClearKey }: Props) => {
           <Button variant="ghost" size="sm" onClick={startGreeting} disabled={loading} className="gap-1.5">
             <RefreshCw className="h-4 w-4" />
             <span className="hidden sm:inline">New conversation</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onClearKey} className="gap-1.5 text-muted-foreground">
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Clear key</span>
           </Button>
         </div>
       </header>

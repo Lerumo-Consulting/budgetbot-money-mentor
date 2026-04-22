@@ -1,71 +1,8 @@
-export const SYSTEM_PROMPT = `You are BudgetBot, a friendly and practical personal finance assistant for South Africans. Your job is to help users manage their money better through conversation — no bank account access, no real transactions, just smart guidance.
-
-Your tone is warm, encouraging, and jargon-free. You speak like a financially savvy friend, not a bank. Use South African context where relevant (rands, local cost of living, load-shedding expenses, stokvels, etc.).
-
-You help users with:
-- Breaking down monthly income and expenses into categories (rent, food, transport, airtime, data, entertainment, savings)
-- Calculating how much they can realistically save each month
-- Setting specific savings goals and working out a timeline
-- Giving practical tips to reduce spending in specific categories
-- Explaining simple financial concepts (50/30/20 rule, emergency funds, compound interest)
-
-How you work:
-- Ask one question at a time. Never overwhelm the user.
-- When a user shares numbers, do the maths for them and present it clearly.
-- Always summarise what you have worked out before moving on.
-- Be encouraging — even small savings matter.
-- If the user seems stressed about money, acknowledge that before jumping into advice.
-
-Hard limits:
-- Never give certified financial, tax, or investment advice.
-- If asked about shares, crypto, retirement annuities, or tax, say: 'That is outside what I can help with — I would recommend speaking to a certified financial advisor for that.'
-- Never ask for banking details, passwords, or ID numbers.
-- Do not claim to store or remember data between sessions.
-
-Start by greeting the user warmly and asking: 'To get started, can you tell me roughly what your monthly take-home income is?'`;
-
 export type ChatRole = "user" | "assistant";
 export interface ChatMessage {
   role: ChatRole;
   content: string;
   timestamp: number;
-}
-
-export async function callClaude(apiKey: string, history: ChatMessage[]): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: history.map((m) => ({ role: m.role, content: m.content })),
-    }),
-  });
-
-  if (!res.ok) {
-    let detail = "";
-    try {
-      const err = await res.json();
-      detail = err?.error?.message || JSON.stringify(err);
-    } catch {
-      detail = await res.text();
-    }
-    throw new Error(`Claude API error (${res.status}): ${detail}`);
-  }
-
-  const data = await res.json();
-  const text = (data?.content || [])
-    .filter((b: { type: string }) => b.type === "text")
-    .map((b: { text: string }) => b.text)
-    .join("\n")
-    .trim();
-  return text || "(No response)";
 }
 
 export const formatTime = (ts: number) => {
@@ -74,3 +11,94 @@ export const formatTime = (ts: number) => {
   const mm = d.getMinutes().toString().padStart(2, "0");
   return `${hh}:${mm}`;
 };
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+export async function streamChat({
+  messages,
+  onDelta,
+  onDone,
+  onError,
+}: {
+  messages: { role: ChatRole; content: string }[];
+  onDelta: (chunk: string) => void;
+  onDone: () => void;
+  onError: (message: string) => void;
+}) {
+  let resp: Response;
+  try {
+    resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages }),
+    });
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Network error");
+    return;
+  }
+
+  if (!resp.ok || !resp.body) {
+    let msg = `Request failed (${resp.status})`;
+    try {
+      const j = await resp.json();
+      if (j?.error) msg = j.error;
+    } catch { /* ignore */ }
+    if (resp.status === 429) msg = "BudgetBot is busy right now. Please try again in a moment.";
+    if (resp.status === 402) msg = "AI credits exhausted. Please add credits to your Lovable workspace.";
+    onError(msg);
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let textBuffer = "";
+  let streamDone = false;
+
+  while (!streamDone) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    textBuffer += decoder.decode(value, { stream: true });
+
+    let newlineIndex: number;
+    while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+      let line = textBuffer.slice(0, newlineIndex);
+      textBuffer = textBuffer.slice(newlineIndex + 1);
+      if (line.endsWith("\r")) line = line.slice(0, -1);
+      if (line.startsWith(":") || line.trim() === "") continue;
+      if (!line.startsWith("data: ")) continue;
+
+      const jsonStr = line.slice(6).trim();
+      if (jsonStr === "[DONE]") { streamDone = true; break; }
+
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+        if (content) onDelta(content);
+      } catch {
+        textBuffer = line + "\n" + textBuffer;
+        break;
+      }
+    }
+  }
+
+  if (textBuffer.trim()) {
+    for (let raw of textBuffer.split("\n")) {
+      if (!raw) continue;
+      if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+      if (raw.startsWith(":") || raw.trim() === "") continue;
+      if (!raw.startsWith("data: ")) continue;
+      const jsonStr = raw.slice(6).trim();
+      if (jsonStr === "[DONE]") continue;
+      try {
+        const parsed = JSON.parse(jsonStr);
+        const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+        if (content) onDelta(content);
+      } catch { /* ignore */ }
+    }
+  }
+
+  onDone();
+}
